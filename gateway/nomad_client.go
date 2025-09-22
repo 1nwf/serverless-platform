@@ -91,14 +91,15 @@ func (n *NomadClient) BlockUntilJobRun(jobId string) (*JobInfo, error) {
 
 	for ev := range events {
 		for _, value := range ev.Events {
-			payload := value.Payload[string(api.TopicAllocation)].(map[string]any)
-			status := payload["ClientStatus"]
-			if status == api.AllocClientStatusRunning {
-				allocatedPort := payload["Resources"].(map[string]any)["Networks"].([]any)[0].(map[string]any)["DynamicPorts"].([]any)[0].(map[string]any)["Value"].(float64)
-				nodeName := payload["NodeName"].(string)
+			alloc, err := value.Allocation()
+			if alloc.ClientStatus == api.AllocClientStatusRunning {
+				if err != nil {
+					return nil, err
+				}
+				allocatedPort := alloc.Resources.Networks[0].DynamicPorts[0].Value
 				return &JobInfo{
-					HostPort: int(allocatedPort),
-					NodeName: nodeName,
+					HostPort: allocatedPort,
+					NodeName: alloc.NodeName,
 				}, nil
 			}
 		}
