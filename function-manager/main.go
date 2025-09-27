@@ -20,16 +20,17 @@ var (
 )
 
 type InvokeInfo struct {
-	jobId        string
+	allocId      string
 	functionName string
 }
 
 func invokeInfo() InvokeInfo {
+	allocId := os.Getenv("NOMAD_ALLOC_ID")
 	jobId := os.Getenv("NOMAD_JOB_ID")
 	idx := strings.IndexRune(jobId, '/')
 	functionName := jobId[:idx]
 	return InvokeInfo{
-		jobId,
+		allocId,
 		functionName,
 	}
 }
@@ -39,7 +40,6 @@ func main() {
 	info := invokeInfo()
 	log.Printf("invocation info: %v", info)
 	redisAddr := os.Getenv("REDIS_ADDR")
-
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: redisAddr,
 		DB:   0,
@@ -49,6 +49,7 @@ func main() {
 	mux := http.NewServeMux()
 	target, _ := url.Parse("http://localhost:8000")
 	proxy := httputil.NewSingleHostReverseProxy(target)
+
 	mux.HandleFunc("/{function}/invoke", func(w http.ResponseWriter, r *http.Request) {
 		proxy.ServeHTTP(w, r)
 	})
@@ -56,7 +57,7 @@ func main() {
 	server := http.Server{Handler: mux}
 	err := server.Serve(&lis)
 	if err != nil && errors.Is(err, ErrTimeout) {
-		if err := redisClient.SRem(ctx, "warm:"+info.functionName, info.jobId).Err(); err != nil {
+		if err := redisClient.SRem(ctx, "warm:"+info.functionName, info.allocId).Err(); err != nil {
 			log.Printf("failed to remove instance from warm cache: %v", err)
 		}
 
