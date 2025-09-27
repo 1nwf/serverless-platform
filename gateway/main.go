@@ -11,12 +11,12 @@ import (
 )
 
 const (
-	redisAddr = "localhost:6379"
+	redisAddr = "host.docker.internal:6379"
 )
 
 func main() {
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: redisAddr,
+		Addr: "localhost:6379",
 		DB:   0,
 	})
 	_ = redisClient
@@ -26,24 +26,15 @@ func main() {
 	}
 
 	jobId := "function"
-	res, err := client.RegisterJob(jobId, "redis:latest")
+	env := map[string]string{"REDIS_ADDR": redisAddr}
+	res, err := client.RegisterJob(jobId, "fn-manager:local", env)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(res)
+	ctrl := NewController(client, redisClient)
 
-	for range 1 {
-		res, err := client.Displatch(jobId)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(res)
-		info, err := client.BlockUntilJobRun(res.DispatchedJobID)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(info)
-	}
+	startServer(ctrl)
 }
 
 func startServer(controller *Controller) {
@@ -60,12 +51,13 @@ func invokeHandler(ctrl *Controller) http.HandlerFunc {
 		vars := mux.Vars(r)
 		functionName := vars["function"]
 		log.Printf("%s function invoked", functionName)
-		info, err := ctrl.GetAvailHost(functionName)
+		info, err := ctrl.ClaimInstance(r.Context(), functionName)
+		defer ctrl.ReleaseInstance(r.Context(), functionName, info)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		targetUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", info.NodeName, info.HostPort))
+		targetUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", info.NodeName, info.Port))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
