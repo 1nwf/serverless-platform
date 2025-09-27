@@ -7,6 +7,10 @@ import (
 	"github.com/hashicorp/nomad/api"
 )
 
+const (
+	FunctionPort = 6379
+)
+
 type NomadClient struct {
 	client *api.Client
 }
@@ -25,17 +29,18 @@ func NewNomadClient() (*NomadClient, error) {
 func (n *NomadClient) RegisterJob(jobId string, dockerImage string) (*api.JobRegisterResponse, error) {
 	// should set a dynamic network port env
 	// that should be used by the container process
+	portLabel := "http"
 	task := api.NewTask(jobId, "docker").
 		SetConfig("image", dockerImage).
-		SetConfig("ports", []string{"addr"})
+		SetConfig("ports", []string{portLabel})
 
 	taskGroup := api.NewTaskGroup(jobId, 1).AddTask(task)
 	netCfg := &api.NetworkResource{
 		Mode: "host",
 		DynamicPorts: []api.Port{
 			{
-				Label: "addr",
-				To:    6379,
+				Label: portLabel,
+				To:    FunctionPort,
 			},
 		},
 	}
@@ -63,7 +68,6 @@ func (n *NomadClient) ListRunningJobs(jobId string) ([]*api.JobListStub, error) 
 		Filter: `Status == "running"`,
 	})
 	return res, err
-
 }
 
 func (n *NomadClient) GetAllocation(jobId string) ([]*api.AllocationListStub, error) {
@@ -72,6 +76,7 @@ func (n *NomadClient) GetAllocation(jobId string) ([]*api.AllocationListStub, er
 }
 
 type JobInfo struct {
+	Id       string
 	HostPort int
 	NodeName string
 }
@@ -98,6 +103,7 @@ func (n *NomadClient) BlockUntilJobRun(jobId string) (*JobInfo, error) {
 				}
 				allocatedPort := alloc.Resources.Networks[0].DynamicPorts[0].Value
 				return &JobInfo{
+					Id:       jobId,
 					HostPort: allocatedPort,
 					NodeName: alloc.NodeName,
 				}, nil
@@ -106,4 +112,12 @@ func (n *NomadClient) BlockUntilJobRun(jobId string) (*JobInfo, error) {
 	}
 
 	return nil, errors.New("unable to retrieve job status")
+}
+
+func (n *NomadClient) StopJob(jobId string) error {
+	if _, _, err := n.client.Jobs().Deregister(jobId, true, nil); err != nil {
+		return err
+	}
+
+	return nil
 }

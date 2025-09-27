@@ -25,8 +25,8 @@ func main() {
 	})
 
 	err := http.Serve(&lis, mux)
-	if err != nil {
-		panic(err)
+	if err != nil && errors.Is(err, ErrTimeout) {
+		// deregister container
 	}
 }
 

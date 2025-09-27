@@ -2,10 +2,16 @@ module github.com/1nwf/build-your-own-serverless/gateway
 
 go 1.25.1
 
-require github.com/hashicorp/nomad/api v0.0.0-20250919161717-b5530128df74
+require (
+	github.com/gorilla/mux v1.8.1
+	github.com/hashicorp/nomad/api v0.0.0-20250919161717-b5530128df74
+	github.com/redis/go-redis/v9 v9.14.0
+)
 
 require (
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/cronexpr v1.1.3 // indirect
