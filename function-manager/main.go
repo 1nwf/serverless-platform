@@ -1,22 +1,51 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 var (
 	ErrTimeout = errors.New("listener timeout")
 )
 
-func main() {
-	lis := NewListener(":3000")
+type InvokeInfo struct {
+	jobId        string
+	functionName string
+}
 
+func invokeInfo() InvokeInfo {
+	jobId := os.Getenv("NOMAD_JOB_ID")
+	idx := strings.IndexRune(jobId, '/')
+	functionName := jobId[:idx]
+	return InvokeInfo{
+		jobId,
+		functionName,
+	}
+}
+
+func main() {
+	ctx := context.Background()
+	info := invokeInfo()
+	log.Printf("invocation info: %v", info)
+	redisAddr := os.Getenv("REDIS_ADDR")
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: redisAddr,
+		DB:   0,
+	})
+
+	lis := NewListener(":3000")
 	mux := http.NewServeMux()
 	target, _ := url.Parse("http://localhost:8000")
 	proxy := httputil.NewSingleHostReverseProxy(target)
@@ -24,9 +53,16 @@ func main() {
 		proxy.ServeHTTP(w, r)
 	})
 
-	err := http.Serve(&lis, mux)
+	server := http.Server{Handler: mux}
+	err := server.Serve(&lis)
 	if err != nil && errors.Is(err, ErrTimeout) {
-		// deregister container
+		if err := redisClient.SRem(ctx, "warm:"+info.functionName, info.jobId).Err(); err != nil {
+			log.Printf("failed to remove instance from warm cache: %v", err)
+		}
+
+		if err := server.Shutdown(ctx); err != nil {
+			log.Fatalf("server failed to shutdown gracefully: %v", err)
+		}
 	}
 }
 
