@@ -9,7 +9,9 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -53,6 +55,17 @@ func main() {
 	mux.HandleFunc("/{function}/invoke", func(w http.ResponseWriter, r *http.Request) {
 		proxy.ServeHTTP(w, r)
 	})
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGTERM)
+
+	go func() {
+		<-ch
+		if err := redisClient.SRem(ctx, "warm:"+info.functionName, info.allocId).Err(); err != nil {
+			log.Printf("failed to remove instance from warm cache: %v", err)
+		}
+		log.Printf("function terminated")
+	}()
 
 	server := http.Server{Handler: mux}
 	err := server.Serve(&lis)
