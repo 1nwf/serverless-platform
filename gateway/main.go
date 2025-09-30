@@ -27,21 +27,19 @@ func main() {
 
 	jobId := "function"
 	env := map[string]string{"REDIS_ADDR": redisAddr}
-	res, err := client.RegisterJob(jobId, "fn-manager:local", env)
+	_, err = client.RegisterJob(jobId, "test-fn:local", env)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(res)
-	ctrl := NewController(client, redisClient)
 
-	startServer(ctrl)
+	startServer(NewController(client, redisClient))
 }
 
 func startServer(controller *Controller) {
 	r := mux.NewRouter()
 	r.HandleFunc("/{function}/invoke", invokeHandler(controller))
-	log.Print("starting server on :3000")
-	if err := http.ListenAndServe(":3000", r); err != nil {
+	log.Print("starting server on :8080")
+	if err := http.ListenAndServe(":8080", r); err != nil {
 		panic(err)
 	}
 }
@@ -57,7 +55,7 @@ func invokeHandler(ctrl *Controller) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		targetUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", info.NodeName, info.Port))
+		targetUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", info.NodeName, 8000))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
