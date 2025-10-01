@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -54,6 +55,10 @@ func main() {
 
 	mux.HandleFunc("/{function}/invoke", func(w http.ResponseWriter, r *http.Request) {
 		proxy.ServeHTTP(w, r)
+		key := fmt.Sprintf("warm:%s", info.functionName)
+		if err := redisClient.SAdd(r.Context(), key, info.allocId).Err(); err != nil {
+			log.Printf("failed to add instance from warm cache: %v", err)
+		}
 	})
 
 	ch := make(chan os.Signal, 1)
@@ -70,6 +75,7 @@ func main() {
 	server := http.Server{Handler: mux}
 	err := server.Serve(&lis)
 	if err != nil && errors.Is(err, ErrTimeout) {
+		log.Print("shutting down function instance due to timeout")
 		if err := redisClient.SRem(ctx, "warm:"+info.functionName, info.allocId).Err(); err != nil {
 			log.Printf("failed to remove instance from warm cache: %v", err)
 		}

@@ -50,7 +50,6 @@ func invokeHandler(ctrl *Controller) http.HandlerFunc {
 		functionName := vars["function"]
 		log.Printf("%s function invoked", functionName)
 		info, err := ctrl.ClaimInstance(r.Context(), functionName)
-		defer ctrl.ReleaseInstance(r.Context(), functionName, info)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
