@@ -38,10 +38,10 @@ func (n *NomadClient) RegisterJob(jobId string, dockerImage string, env map[stri
 		// this is because nomad does not support bridge networking on macos
 		SetConfig("network_mode", "host").
 		SetLifecycle(&api.TaskLifecycle{
-			Sidecar: true,
-			Hook:    api.TaskLifecycleHookPoststart,
+			Hook: api.TaskLifecycleHookPoststart,
 		})
 	sidecarTask.Env = env
+	sidecarTask.Leader = true
 
 	task := api.NewTask(jobId, "docker").
 		SetConfig("image", dockerImage).
@@ -51,6 +51,10 @@ func (n *NomadClient) RegisterJob(jobId string, dockerImage string, env map[stri
 	// disable auto restarts on task failure
 	restartAttempts := 0
 	restartMode := "fail"
+	// disable restarts and rescheduling on failure
+	taskGroup.ReschedulePolicy = &api.ReschedulePolicy{
+		Attempts: &restartAttempts,
+	}
 	taskGroup.RestartPolicy = &api.RestartPolicy{
 		Attempts: &restartAttempts,
 		Mode:     &restartMode,
