@@ -5,18 +5,16 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/redis/go-redis/v9"
 )
 
-const (
-	redisAddr = "host.docker.internal:6379"
-)
-
 func main() {
+	redisAddr := os.Getenv("REDIS_ADDR")
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: redisAddr,
 		DB:   0,
 	})
 	_ = redisClient
@@ -27,7 +25,7 @@ func main() {
 
 	jobId := "function"
 	env := map[string]string{"REDIS_ADDR": redisAddr}
-	_, err = client.RegisterJob(jobId, "test-fn:local", env)
+	_, err = client.RegisterJob(jobId, "nwf1/test-fn", env)
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +52,7 @@ func invokeHandler(ctrl *Controller) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		targetUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", info.NodeName, 3000))
+		targetUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", info.NodeName, info.Port))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return

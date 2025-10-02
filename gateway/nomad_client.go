@@ -9,7 +9,7 @@ import (
 
 const (
 	FunctionPort         = 3000
-	FunctionManagerImage = "fn-manager:local"
+	FunctionManagerImage = "nwf1/fn-manager"
 )
 
 type NomadClient struct {
@@ -36,7 +36,6 @@ func (n *NomadClient) RegisterJob(jobId string, dockerImage string, env map[stri
 		SetConfig("ports", []string{portLabel}).
 		// NOTE: this is set to host for testing ONLY.
 		// this is because nomad does not support bridge networking on macos
-		SetConfig("network_mode", "host").
 		SetLifecycle(&api.TaskLifecycle{
 			Hook: api.TaskLifecycleHookPoststart,
 		})
@@ -44,8 +43,7 @@ func (n *NomadClient) RegisterJob(jobId string, dockerImage string, env map[stri
 	sidecarTask.Leader = true
 
 	task := api.NewTask(jobId, "docker").
-		SetConfig("image", dockerImage).
-		SetConfig("network_mode", "host")
+		SetConfig("image", dockerImage)
 
 	taskGroup := api.NewTaskGroup(jobId, 1).AddTask(sidecarTask).AddTask(task)
 	// disable auto restarts on task failure
@@ -60,7 +58,7 @@ func (n *NomadClient) RegisterJob(jobId string, dockerImage string, env map[stri
 		Mode:     &restartMode,
 	}
 	netCfg := &api.NetworkResource{
-		Mode: "host",
+		Mode: "bridge",
 		DynamicPorts: []api.Port{
 			{
 				Label: portLabel,
