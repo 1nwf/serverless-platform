@@ -35,9 +35,9 @@ func (c *Controller) ClaimInstance(ctx context.Context, functionName string) (*J
 	return info, nil
 }
 
-func (c *Controller) ReleaseInstance(ctx context.Context, functionName string, info *JobInfo) {
+func (c *Controller) ReleaseInstance(ctx context.Context, functionName string, info *JobInfo) error {
 	key := fmt.Sprintf("warm:%s", functionName)
-	c.rdb.SAdd(ctx, key, info.AllocId)
+	return c.rdb.LRem(ctx, key, 1, info.AllocId).Err()
 }
 
 func (c *Controller) coldStartFunction(ctx context.Context, functionName string) (*JobInfo, error) {
@@ -54,4 +54,11 @@ func (c *Controller) coldStartFunction(ctx context.Context, functionName string)
 	}
 	info, err := c.nomadClient.GetAllocatonInfo(res[1])
 	return info, err
+}
+
+func (c *Controller) RegisterFunction(name string, dockerImage string) error {
+	redisAddr := c.rdb.Options().Addr
+	env := map[string]string{"REDIS_ADDR": redisAddr}
+	_, err := c.nomadClient.RegisterJob(name, dockerImage, env)
+	return err
 }

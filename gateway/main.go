@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -36,6 +37,7 @@ func main() {
 func startServer(controller *Controller) {
 	r := mux.NewRouter()
 	r.HandleFunc("/{function}/invoke", invokeHandler(controller))
+	r.HandleFunc("/register", registerFunction(controller)).Methods(http.MethodPost)
 	log.Print("starting server on :8080")
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		panic(err)
@@ -58,5 +60,28 @@ func invokeHandler(ctrl *Controller) http.HandlerFunc {
 			return
 		}
 		ProxyRequest(targetUrl, w, r)
+	}
+}
+
+type RegisterFunctionRequest struct {
+	FunctionName string `json:"function_name"`
+	DockerImage  string `json:"docker_image"`
+}
+
+func registerFunction(ctrl *Controller) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		decoder := json.NewDecoder(r.Body)
+		var body RegisterFunctionRequest
+		if err := decoder.Decode(&body); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		log.Printf("register function: %v", body)
+		if err := ctrl.RegisterFunction(body.FunctionName, body.DockerImage); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	}
 }
