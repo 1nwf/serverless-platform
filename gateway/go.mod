@@ -1,4 +1,4 @@
-module github.com/1nwf/build-your-own-serverless/gateway
+module github.com/1nwf/serverless-platform/gateway
 
 go 1.25.1
 

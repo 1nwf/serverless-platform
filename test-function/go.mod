@@ -1,3 +1,3 @@
-module github.com/1nwf/build-your-own-serverless/test-function
+module github.com/1nwf/serverless-platform/test-function
 
 go 1.25.1

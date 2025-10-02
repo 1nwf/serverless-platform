@@ -34,8 +34,6 @@ func (n *NomadClient) RegisterJob(jobId string, dockerImage string, env map[stri
 	sidecarTask := api.NewTask("manager", "docker").
 		SetConfig("image", FunctionManagerImage).
 		SetConfig("ports", []string{portLabel}).
-		// NOTE: this is set to host for testing ONLY.
-		// this is because nomad does not support bridge networking on macos
 		SetLifecycle(&api.TaskLifecycle{
 			Hook: api.TaskLifecycleHookPoststart,
 		})
