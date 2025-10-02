@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -38,6 +37,21 @@ func invokeInfo() InvokeInfo {
 	}
 }
 
+type Cache struct {
+	rdb  *redis.Client
+	info InvokeInfo
+}
+
+func (c *Cache) AddInstance(ctx context.Context) error {
+	key := "warm:" + c.info.functionName
+	return c.rdb.LPush(ctx, key, c.info.allocId).Err()
+}
+
+func (c *Cache) RemInstance(ctx context.Context) error {
+	key := "warm:" + c.info.functionName
+	return c.rdb.LRem(ctx, key, 1, c.info.allocId).Err()
+}
+
 func main() {
 	ctx := context.Background()
 	info := invokeInfo()
@@ -47,6 +61,10 @@ func main() {
 		Addr: redisAddr,
 		DB:   0,
 	})
+	cache := &Cache{
+		rdb:  redisClient,
+		info: info,
+	}
 
 	lis := NewListener(":3000")
 	mux := http.NewServeMux()
@@ -55,8 +73,7 @@ func main() {
 
 	mux.HandleFunc("/{function}/invoke", func(w http.ResponseWriter, r *http.Request) {
 		proxy.ServeHTTP(w, r)
-		key := fmt.Sprintf("warm:%s", info.functionName)
-		if err := redisClient.SAdd(r.Context(), key, info.allocId).Err(); err != nil {
+		if err := cache.AddInstance(r.Context()); err != nil {
 			log.Printf("failed to add instance from warm cache: %v", err)
 		}
 	})
@@ -66,17 +83,21 @@ func main() {
 
 	go func() {
 		<-ch
-		if err := redisClient.SRem(ctx, "warm:"+info.functionName, info.allocId).Err(); err != nil {
+		if err := cache.RemInstance(ctx); err != nil {
 			log.Printf("failed to remove instance from warm cache: %v", err)
 		}
 		log.Printf("function terminated")
 	}()
 
 	server := http.Server{Handler: mux}
+	// add instance to function's warm cache to start receiving requests
+	if err := cache.AddInstance(ctx); err != nil {
+		log.Printf("failed to add instance from warm cache: %v", err)
+	}
 	err := server.Serve(&lis)
 	if err != nil && errors.Is(err, ErrTimeout) {
 		log.Print("shutting down function instance due to timeout")
-		if err := redisClient.SRem(ctx, "warm:"+info.functionName, info.allocId).Err(); err != nil {
+		if err := cache.RemInstance(ctx); err != nil {
 			log.Printf("failed to remove instance from warm cache: %v", err)
 		}
 
