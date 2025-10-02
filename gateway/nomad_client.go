@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	FunctionPort         = 8000
+	FunctionPort         = 3000
 	FunctionManagerImage = "fn-manager:local"
 )
 

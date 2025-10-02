@@ -54,7 +54,7 @@ func invokeHandler(ctrl *Controller) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		targetUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", info.NodeName, 8000))
+		targetUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", info.NodeName, 3000))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
