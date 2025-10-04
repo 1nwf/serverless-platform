@@ -72,6 +72,12 @@ func main() {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	shutdown := make(chan bool, 1)
 
+	// signal shutdown after completion of inner func
+	shutdownFunc := func(inner func()) {
+		inner()
+		shutdown <- true
+	}
+
 	mux.HandleFunc("/{function}/invoke", func(w http.ResponseWriter, r *http.Request) {
 		proxy.ServeHTTP(w, r)
 		if err := cache.AddInstance(r.Context()); err != nil {
@@ -84,21 +90,22 @@ func main() {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGTERM)
 
-	go func() {
+	go shutdownFunc(func() {
 		<-ch
 		if err := cache.RemInstance(ctx); err != nil {
 			log.Printf("failed to remove instance from warm cache: %v", err)
 		}
-		shutdown <- true
 		log.Printf("function terminated")
-	}()
+	})
 
 	server := http.Server{Handler: mux}
 	// add instance to function's warm cache to start receiving requests
-	if err := cache.AddInstance(ctx); err != nil {
-		log.Printf("failed to add instance from warm cache: %v", err)
-	}
-	go func() {
+	go shutdownFunc(func() {
+		if err := cache.AddInstance(ctx); err != nil {
+			log.Printf("failed to add instance from warm cache: %v", err)
+			return
+		}
+
 		err := server.Serve(&lis)
 		if err != nil && errors.Is(err, ErrTimeout) {
 			log.Print("shutting down function instance due to timeout")
@@ -106,8 +113,7 @@ func main() {
 				log.Printf("failed to remove instance from warm cache: %v", err)
 			}
 		}
-		shutdown <- true
-	}()
+	})
 
 	<-shutdown
 	if err := server.Shutdown(ctx); err != nil {
