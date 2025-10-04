@@ -28,13 +28,6 @@ func main() {
 		panic(err)
 	}
 
-	jobId := "function"
-	env := map[string]string{"REDIS_ADDR": redisAddr}
-	_, err = client.RegisterJob(jobId, "nwf1/test-fn", env)
-	if err != nil {
-		panic(err)
-	}
-
 	startServer(NewController(client, redisClient))
 }
 
@@ -68,8 +61,9 @@ func invokeHandler(ctrl *Controller) http.HandlerFunc {
 }
 
 type RegisterFunctionRequest struct {
-	FunctionName string `json:"function_name"`
-	DockerImage  string `json:"docker_image"`
+	FunctionName string            `json:"function_name"`
+	DockerImage  string            `json:"docker_image"`
+	Resources    FunctionResources `json:"resources"`
 }
 
 func registerFunction(ctrl *Controller) http.HandlerFunc {
@@ -82,7 +76,7 @@ func registerFunction(ctrl *Controller) http.HandlerFunc {
 		}
 
 		log.Printf("register function: %v", body)
-		if err := ctrl.RegisterFunction(body.FunctionName, body.DockerImage); err != nil {
+		if err := ctrl.RegisterFunction(body.FunctionName, body.DockerImage, body.Resources); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

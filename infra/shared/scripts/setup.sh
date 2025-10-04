@@ -31,6 +31,12 @@ sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/${di
 sudo apt-get update
 sudo apt-get install -y docker-ce
 
+
+# # Install Golang
+# wget https://go.dev/dl/go1.25.1.linux-amd64.tar.gz
+# tar -C /usr/local -xzf go1.25.1.linux-amd64.tar.gz
+# export PATH=$PATH:/usr/local/go/bin
+
 # Install HashiCorp Apt Repository
 wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
 echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list

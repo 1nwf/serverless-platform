@@ -27,7 +27,18 @@ func NewNomadClient() (*NomadClient, error) {
 	}, nil
 }
 
-func (n *NomadClient) RegisterJob(jobId string, dockerImage string, env map[string]string) (*api.JobRegisterResponse, error) {
+type FunctionResources struct {
+	Cpu       *int `json:"cpu"`
+	Memory    *int `json:"mem"`
+	MemoryMax *int `json:"mem_max"`
+}
+
+func (n *NomadClient) RegisterJob(
+	jobId string,
+	dockerImage string,
+	env map[string]string,
+	resources FunctionResources,
+) (*api.JobRegisterResponse, error) {
 	// should set a dynamic network port env
 	// that should be used by the container process
 	portLabel := "http"
@@ -42,6 +53,9 @@ func (n *NomadClient) RegisterJob(jobId string, dockerImage string, env map[stri
 
 	task := api.NewTask(jobId, "docker").
 		SetConfig("image", dockerImage)
+	task.Resources.MemoryMB = resources.Memory
+	task.Resources.MemoryMaxMB = resources.MemoryMax
+	task.Resources.CPU = resources.Cpu
 
 	taskGroup := api.NewTaskGroup(jobId, 1).AddTask(sidecarTask).AddTask(task)
 	// disable auto restarts on task failure

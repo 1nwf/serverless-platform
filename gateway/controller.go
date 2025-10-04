@@ -56,9 +56,9 @@ func (c *Controller) coldStartFunction(ctx context.Context, functionName string)
 	return info, err
 }
 
-func (c *Controller) RegisterFunction(name string, dockerImage string) error {
+func (c *Controller) RegisterFunction(name string, dockerImage string, resources FunctionResources) error {
 	redisAddr := c.rdb.Options().Addrs[0]
 	env := map[string]string{"REDIS_ADDR": redisAddr}
-	_, err := c.nomadClient.RegisterJob(name, dockerImage, env)
+	_, err := c.nomadClient.RegisterJob(name, dockerImage, env, resources)
 	return err
 }
