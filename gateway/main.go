@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -14,11 +15,14 @@ import (
 
 func main() {
 	redisAddr := os.Getenv("REDIS_ADDR")
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: redisAddr,
-		DB:   0,
+	log.Printf("redis addr: %v", redisAddr)
+	redisClient := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs: []string{redisAddr},
+		TLSConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
 	})
-	_ = redisClient
+
 	client, err := NewNomadClient()
 	if err != nil {
 		panic(err)

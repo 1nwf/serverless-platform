@@ -10,11 +10,11 @@ import (
 )
 
 type Controller struct {
-	rdb         *redis.Client
+	rdb         *redis.ClusterClient
 	nomadClient *NomadClient
 }
 
-func NewController(nomadClient *NomadClient, rdb *redis.Client) *Controller {
+func NewController(nomadClient *NomadClient, rdb *redis.ClusterClient) *Controller {
 	return &Controller{rdb, nomadClient}
 }
 
@@ -57,7 +57,7 @@ func (c *Controller) coldStartFunction(ctx context.Context, functionName string)
 }
 
 func (c *Controller) RegisterFunction(name string, dockerImage string) error {
-	redisAddr := c.rdb.Options().Addr
+	redisAddr := c.rdb.Options().Addrs[0]
 	env := map[string]string{"REDIS_ADDR": redisAddr}
 	_, err := c.nomadClient.RegisterJob(name, dockerImage, env)
 	return err

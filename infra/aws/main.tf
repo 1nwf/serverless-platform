@@ -2,14 +2,14 @@ provider "aws" {
   region = var.region
 }
 
-data "aws_vpc" "default" {
-  default = true
-}
+# data "aws_vpc" "default" {
+#   default = true
+# }
 
 
 resource "aws_security_group" "allow-all-ingress" {
   name   = "${var.name_prefix}-allow-all-ingress"
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = aws_vpc.main.id
 
   ingress {
     from_port   = 0
@@ -21,7 +21,7 @@ resource "aws_security_group" "allow-all-ingress" {
 
 resource "aws_security_group" "nomad_ui_ingress" {
   name   = "${var.name_prefix}-ui-ingress"
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = aws_vpc.main.id
 
   # Nomad
   ingress {
@@ -49,7 +49,7 @@ resource "aws_security_group" "nomad_ui_ingress" {
 
 resource "aws_security_group" "ssh_ingress" {
   name   = "${var.name_prefix}-ssh-ingress"
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = aws_vpc.main.id
 
   # SSH
   ingress {
@@ -76,7 +76,7 @@ resource "aws_security_group" "ssh_ingress" {
 
 resource "aws_security_group" "allow_all_internal" {
   name   = "${var.name_prefix}-allow-all-internal"
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = aws_vpc.main.id
 
   ingress {
     from_port = 0
@@ -95,7 +95,7 @@ resource "aws_security_group" "allow_all_internal" {
 
 resource "aws_security_group" "clients_ingress" {
   name   = "${var.name_prefix}-clients-ingress"
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = aws_vpc.main.id
 
   ingress {
     from_port = 0
@@ -145,6 +145,7 @@ resource "aws_instance" "server" {
   key_name               = aws_key_pair.nomad.key_name
   vpc_security_group_ids = [aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
   count                  = var.server_count
+  subnet_id              = aws_subnet.cluster.id
 
   # instance tags
   # NomadAutoJoin is necessary for nodes to automatically join the cluster
@@ -188,6 +189,7 @@ resource "aws_instance" "client" {
   vpc_security_group_ids = [aws_security_group.allow-all-ingress.id, aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.clients_ingress.id, aws_security_group.allow_all_internal.id]
   count                  = var.client_count
   depends_on             = [aws_instance.server]
+  subnet_id              = aws_subnet.cluster.id
 
   # instance tags
   # NomadAutoJoin is necessary for nodes to automatically join the cluster
@@ -270,4 +272,64 @@ data "aws_iam_policy_document" "auto_discover_cluster" {
 
     resources = ["*"]
   }
+}
+
+
+resource "aws_security_group" "cache" {
+  name   = "${var.name_prefix}-cache-ingress"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_elasticache_serverless_cache" "functions" {
+  engine               = "valkey"
+  name                 = "functions"
+  subnet_ids           = [aws_subnet.gateway.id, aws_subnet.cluster.id]
+  security_group_ids   = [aws_security_group.cache.id]
+  major_engine_version = "8"
+  cache_usage_limits {
+    data_storage {
+      maximum = "10"
+      unit    = "GB"
+    }
+  }
+}
+
+
+
+resource "aws_instance" "gateway" {
+  ami                    = var.ami
+  instance_type          = var.server_instance_type
+  key_name               = aws_key_pair.nomad.key_name
+  vpc_security_group_ids = [aws_security_group.allow-all-ingress.id, aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
+  count                  = 1
+  subnet_id              = aws_subnet.gateway.id
+
+  # instance tags
+  tags = merge(
+    {
+      "Name" = "${var.name_prefix}-gateway-${count.index}"
+    },
+  )
+
+  root_block_device {
+    volume_type           = "gp2"
+    volume_size           = var.root_block_device_size
+    delete_on_termination = "true"
+  }
+
+  iam_instance_profile = aws_iam_instance_profile.instance_profile.name
 }
