@@ -70,11 +70,14 @@ func main() {
 	mux := http.NewServeMux()
 	target, _ := url.Parse("http://localhost:8000")
 	proxy := httputil.NewSingleHostReverseProxy(target)
+	shutdown := make(chan bool, 1)
 
 	mux.HandleFunc("/{function}/invoke", func(w http.ResponseWriter, r *http.Request) {
 		proxy.ServeHTTP(w, r)
 		if err := cache.AddInstance(r.Context()); err != nil {
 			log.Printf("failed to add instance from warm cache: %v", err)
+			// shutdown instance since it can no longer be used to handle requests
+			shutdown <- true
 		}
 	})
 
@@ -86,6 +89,7 @@ func main() {
 		if err := cache.RemInstance(ctx); err != nil {
 			log.Printf("failed to remove instance from warm cache: %v", err)
 		}
+		shutdown <- true
 		log.Printf("function terminated")
 	}()
 
@@ -94,16 +98,20 @@ func main() {
 	if err := cache.AddInstance(ctx); err != nil {
 		log.Printf("failed to add instance from warm cache: %v", err)
 	}
-	err := server.Serve(&lis)
-	if err != nil && errors.Is(err, ErrTimeout) {
-		log.Print("shutting down function instance due to timeout")
-		if err := cache.RemInstance(ctx); err != nil {
-			log.Printf("failed to remove instance from warm cache: %v", err)
+	go func() {
+		err := server.Serve(&lis)
+		if err != nil && errors.Is(err, ErrTimeout) {
+			log.Print("shutting down function instance due to timeout")
+			if err := cache.RemInstance(ctx); err != nil {
+				log.Printf("failed to remove instance from warm cache: %v", err)
+			}
 		}
+		shutdown <- true
+	}()
 
-		if err := server.Shutdown(ctx); err != nil {
-			log.Fatalf("server failed to shutdown gracefully: %v", err)
-		}
+	<-shutdown
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("server failed to shutdown gracefully: %v", err)
 	}
 }
 
