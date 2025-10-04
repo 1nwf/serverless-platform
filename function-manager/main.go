@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"log"
 	"net"
@@ -38,7 +39,7 @@ func invokeInfo() InvokeInfo {
 }
 
 type Cache struct {
-	rdb  *redis.Client
+	rdb  *redis.ClusterClient
 	info InvokeInfo
 }
 
@@ -57,9 +58,12 @@ func main() {
 	info := invokeInfo()
 	log.Printf("invocation info: %v", info)
 	redisAddr := os.Getenv("REDIS_ADDR")
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: redisAddr,
-		DB:   0,
+	redisClient := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs: []string{redisAddr},
+		TLSConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+		PoolSize: 1,
 	})
 	cache := &Cache{
 		rdb:  redisClient,
