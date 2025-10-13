@@ -7,121 +7,6 @@ provider "aws" {
 # }
 
 
-resource "aws_security_group" "allow-all-ingress" {
-  name   = "${var.name_prefix}-allow-all-ingress"
-  vpc_id = aws_vpc.main.id
-
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = [var.allowlist_ip]
-  }
-}
-
-resource "aws_security_group" "nomad_ui_ingress" {
-  name   = "${var.name_prefix}-ui-ingress"
-  vpc_id = aws_vpc.main.id
-
-  # Nomad
-  ingress {
-    from_port   = 4646
-    to_port     = 4646
-    protocol    = "tcp"
-    cidr_blocks = [var.allowlist_ip]
-  }
-
-
-  ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    self      = true
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_security_group" "ssh_ingress" {
-  name   = "${var.name_prefix}-ssh-ingress"
-  vpc_id = aws_vpc.main.id
-
-  # SSH
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.allowlist_ip]
-  }
-
-  ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    self      = true
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_security_group" "allow_all_internal" {
-  name   = "${var.name_prefix}-allow-all-internal"
-  vpc_id = aws_vpc.main.id
-
-  ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    self      = true
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_security_group" "clients_ingress" {
-  name   = "${var.name_prefix}-clients-ingress"
-  vpc_id = aws_vpc.main.id
-
-  ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    self      = true
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Add application ingress rules here
-  # These rules are applied only to the client nodes
-
-  # nginx example
-  # ingress {
-  #   from_port   = 80
-  #   to_port     = 80
-  #   protocol    = "tcp"
-  #   cidr_blocks = ["0.0.0.0/0"]
-  # }
-}
 
 resource "tls_private_key" "pk" {
   algorithm = "RSA"
@@ -139,160 +24,28 @@ resource "local_file" "nomad_key" {
   file_permission = "0400"
 }
 
-resource "aws_instance" "server" {
-  ami                    = var.ami
-  instance_type          = var.server_instance_type
-  key_name               = aws_key_pair.nomad.key_name
-  vpc_security_group_ids = [aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
-  count                  = var.server_count
-  subnet_id              = aws_subnet.cluster.id
 
-  # instance tags
-  # NomadAutoJoin is necessary for nodes to automatically join the cluster
-  tags = merge(
-    {
-      "Name" = "${var.name_prefix}-server-${count.index}"
-    },
-    {
-      "NomadAutoJoin" = "auto-join"
-    },
-    {
-      "NomadType" = "server"
-    }
-  )
-
-  root_block_device {
-    volume_type           = "gp2"
-    volume_size           = var.root_block_device_size
-    delete_on_termination = "true"
+module "cluster" {
+  source     = "./modules/cluster"
+  retry_join = var.retry_join
+  region     = var.region
+  server = {
+    count                  = var.server_count
+    instance_type          = var.server_instance_type
+    vpc_security_group_ids = [aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
   }
-
-  user_data = templatefile("${path.module}/../shared/data-scripts/user-data-server.sh", {
-    server_count = var.server_count
-    region       = var.region
-    cloud_env    = "aws"
-    retry_join   = var.retry_join
-    nomad_binary = var.nomad_binary
-  })
+  client = {
+    count                  = var.client_count
+    instance_type          = var.client_instance_type
+    vpc_security_group_ids = [aws_security_group.allow-all-ingress.id, aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.clients_ingress.id, aws_security_group.allow_all_internal.id]
+  }
+  ami                  = var.ami
   iam_instance_profile = aws_iam_instance_profile.instance_profile.name
-
-  metadata_options {
-    http_endpoint          = "enabled"
-    instance_metadata_tags = "enabled"
-  }
+  key_name             = aws_key_pair.nomad.key_name
+  subnet_id            = aws_subnet.cluster.id
+  datacenter           = aws_subnet.cluster.availability_zone
 }
 
-resource "aws_instance" "client" {
-  ami                    = var.ami
-  instance_type          = var.client_instance_type
-  key_name               = aws_key_pair.nomad.key_name
-  vpc_security_group_ids = [aws_security_group.allow-all-ingress.id, aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.clients_ingress.id, aws_security_group.allow_all_internal.id]
-  count                  = var.client_count
-  depends_on             = [aws_instance.server]
-  subnet_id              = aws_subnet.cluster.id
-
-  # instance tags
-  # NomadAutoJoin is necessary for nodes to automatically join the cluster
-  tags = merge(
-    {
-      "Name" = "${var.name_prefix}-client-${count.index}"
-    },
-    {
-      "NomadAutoJoin" = "auto-join"
-    },
-    {
-      "NomadType" = "client"
-    }
-  )
-
-  root_block_device {
-    volume_type           = "gp2"
-    volume_size           = var.root_block_device_size
-    delete_on_termination = "true"
-  }
-
-  ebs_block_device {
-    device_name           = "/dev/xvdd"
-    volume_type           = "gp2"
-    volume_size           = "50"
-    delete_on_termination = "true"
-  }
-
-  user_data = templatefile("${path.module}/../shared/data-scripts/user-data-client.sh", {
-    region       = var.region
-    cloud_env    = "aws"
-    retry_join   = var.retry_join
-    nomad_binary = var.nomad_binary
-  })
-  iam_instance_profile = aws_iam_instance_profile.instance_profile.name
-
-  metadata_options {
-    http_endpoint          = "enabled"
-    instance_metadata_tags = "enabled"
-  }
-}
-
-resource "aws_iam_instance_profile" "instance_profile" {
-  name_prefix = var.name_prefix
-  role        = aws_iam_role.instance_role.name
-}
-
-resource "aws_iam_role" "instance_role" {
-  name_prefix        = var.name_prefix
-  assume_role_policy = data.aws_iam_policy_document.instance_role.json
-}
-
-data "aws_iam_policy_document" "instance_role" {
-  statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
-}
-
-resource "aws_iam_role_policy" "auto_discover_cluster" {
-  name   = "${var.name_prefix}-auto-discover-cluster"
-  role   = aws_iam_role.instance_role.id
-  policy = data.aws_iam_policy_document.auto_discover_cluster.json
-}
-
-data "aws_iam_policy_document" "auto_discover_cluster" {
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "ec2:DescribeInstances",
-      "ec2:DescribeTags",
-      "autoscaling:DescribeAutoScalingGroups",
-    ]
-
-    resources = ["*"]
-  }
-}
-
-
-resource "aws_security_group" "cache" {
-  name   = "${var.name_prefix}-cache-ingress"
-  vpc_id = aws_vpc.main.id
-
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
 
 resource "aws_elasticache_serverless_cache" "functions" {
   engine               = "valkey"

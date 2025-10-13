@@ -15,6 +15,8 @@ CLOUD=$1
 SERVER_COUNT=$2
 RETRY_JOIN=$3
 NOMAD_BINARY=$4
+REGION=$5
+DATACENTER=$6
 
 # Get IP from metadata service
 case $CLOUD in
@@ -39,6 +41,8 @@ esac
 
 # Nomad
 sed -i "s/RETRY_JOIN/$RETRY_JOIN/g" $CONFIGDIR/nomad.hcl
+sed -i "s/REGION/$REGION/g" $CONFIGDIR/nomad.hcl
+sed -i "s/DATACENTER/$DATACENTER/g" $CONFIGDIR/nomad.hcl
 
 ## Replace existing Nomad binary if remote file exists
 if [[ `wget -S --spider $NOMAD_BINARY  2>&1 | grep 'HTTP/1.1 200 OK'` ]]; then

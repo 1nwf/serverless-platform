@@ -1,5 +1,7 @@
-data_dir  = "/opt/nomad/data"
-bind_addr = "0.0.0.0"
+data_dir   = "/opt/nomad/data"
+bind_addr  = "0.0.0.0"
+region     = "REGION"
+datacenter = "DATACENTER"
 
 # Enable the server
 server {

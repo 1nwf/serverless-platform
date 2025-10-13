@@ -14,6 +14,8 @@ DOCKER_BRIDGE_IP_ADDRESS=(`ip -brief addr show docker0 | awk '{print $3}' | awk 
 CLOUD=$1
 RETRY_JOIN=$2
 NOMAD_BINARY=$3
+REGION=$4
+DATACENTER=$5
 
 # Get IP from metadata service
 case $CLOUD in
@@ -38,6 +40,8 @@ esac
 
 # Nomad
 sed -i "s/RETRY_JOIN/$RETRY_JOIN/g" $CONFIGDIR/nomad_client.hcl
+sed -i "s/REGION/$REGION/g" $CONFIGDIR/nomad_client.hcl
+sed -i "s/DATACENTER/$DATACENTER/g" $CONFIGDIR/nomad_client.hcl
 
 
 ## Replace existing Nomad binary if remote file exists

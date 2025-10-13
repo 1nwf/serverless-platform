@@ -1,6 +1,7 @@
 data_dir  = "/opt/nomad/data"
 bind_addr = "0.0.0.0"
-datacenter = "dc1"
+region = "REGION"
+datacenter = "DATACENTER"
 
 # Enable the client
 client {
