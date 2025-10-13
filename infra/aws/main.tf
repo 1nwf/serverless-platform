@@ -57,7 +57,7 @@ resource "aws_instance" "gateway" {
   ami                    = var.ami
   instance_type          = var.server_instance_type
   key_name               = aws_key_pair.nomad.key_name
-  vpc_security_group_ids = [aws_security_group.allow-all-ingress.id, aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
+  vpc_security_group_ids = [aws_security_group.gatway.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
   count                  = 1
   subnet_id              = aws_subnet.gateway.id
 
