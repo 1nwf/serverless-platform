@@ -2,12 +2,6 @@ provider "aws" {
   region = var.region
 }
 
-# data "aws_vpc" "default" {
-#   default = true
-# }
-
-
-
 resource "tls_private_key" "pk" {
   algorithm = "RSA"
   rsa_bits  = 4096
@@ -24,7 +18,6 @@ resource "local_file" "nomad_key" {
   file_permission = "0400"
 }
 
-
 module "cluster" {
   source     = "./modules/cluster"
   retry_join = var.retry_join
@@ -37,7 +30,7 @@ module "cluster" {
   client = {
     count                  = var.client_count
     instance_type          = var.client_instance_type
-    vpc_security_group_ids = [aws_security_group.allow-all-ingress.id, aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.clients_ingress.id, aws_security_group.allow_all_internal.id]
+    vpc_security_group_ids = [aws_security_group.ssh_ingress.id, aws_security_group.clients_ingress.id]
   }
   ami                  = var.ami
   iam_instance_profile = aws_iam_instance_profile.instance_profile.name
@@ -45,7 +38,6 @@ module "cluster" {
   subnet_id            = aws_subnet.cluster.id
   datacenter           = aws_subnet.cluster.availability_zone
 }
-
 
 resource "aws_elasticache_serverless_cache" "functions" {
   engine               = "valkey"
@@ -60,8 +52,6 @@ resource "aws_elasticache_serverless_cache" "functions" {
     }
   }
 }
-
-
 
 resource "aws_instance" "gateway" {
   ami                    = var.ami

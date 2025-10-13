@@ -1,15 +1,3 @@
-resource "aws_security_group" "allow-all-ingress" {
-  name   = "${var.name_prefix}-allow-all-ingress"
-  vpc_id = aws_vpc.main.id
-
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = [var.allowlist_ip]
-  }
-}
-
 resource "aws_security_group" "nomad_ui_ingress" {
   name   = "${var.name_prefix}-ui-ingress"
   vpc_id = aws_vpc.main.id
