@@ -18,8 +18,8 @@ variable "region" {
 data "amazon-ami" "ami" {
   filters = {
     architecture                       = "x86_64"
-    "block-device-mapping.volume-type" = "gp2"
-    name                               = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
+    "block-device-mapping.volume-type" = "gp3"
+    name                               = "ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"
     root-device-type                   = "ebs"
     virtualization-type                = "hvm"
   }

@@ -33,13 +33,15 @@ variable "client_instance_type" {
 }
 
 variable "server_count" {
+  default     = 3
+  type        = number
   description = "The number of servers to provision."
-  default     = "3"
 }
 
 variable "client_count" {
+  default     = 3
+  type        = number
   description = "The number of clients to provision."
-  default     = "3"
 }
 
 variable "root_block_device_size" {

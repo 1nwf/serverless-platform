@@ -21,7 +21,7 @@ resource "aws_instance" "server" {
   )
 
   root_block_device {
-    volume_type           = "gp2"
+    volume_type           = "gp3"
     volume_size           = var.root_block_device_size
     delete_on_termination = "true"
   }
@@ -67,14 +67,14 @@ resource "aws_instance" "client" {
   )
 
   root_block_device {
-    volume_type           = "gp2"
+    volume_type           = "gp3"
     volume_size           = var.root_block_device_size
     delete_on_termination = "true"
   }
 
   ebs_block_device {
     device_name           = "/dev/xvdd"
-    volume_type           = "gp2"
+    volume_type           = "gp3"
     volume_size           = "50"
     delete_on_termination = "true"
   }
