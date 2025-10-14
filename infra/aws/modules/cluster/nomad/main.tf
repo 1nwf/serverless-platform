@@ -8,7 +8,7 @@ resource "aws_instance" "server" {
   key_name               = var.key_name
   vpc_security_group_ids = var.server.vpc_security_group_ids
   count                  = var.server.count
-  subnet_id              = var.subnet_id
+  subnet_id              = var.server.subnet_id
 
   # instance tags
   # NomadAutoJoin is necessary for nodes to automatically join the cluster
@@ -54,7 +54,7 @@ resource "aws_instance" "client" {
   vpc_security_group_ids = var.client.vpc_security_group_ids
   count                  = var.client.count
   depends_on             = [aws_instance.server]
-  subnet_id              = var.subnet_id
+  subnet_id              = var.client.subnet_id
 
   # instance tags
   # NomadAutoJoin is necessary for nodes to automatically join the cluster

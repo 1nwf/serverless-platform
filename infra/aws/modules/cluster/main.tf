@@ -14,24 +14,27 @@ data "aws_ami" "nomad" {
 }
 
 
-module "cluster" {
-  source     = "./nomad"
+module "nomad" {
+  source = "./nomad"
+  count  = length(module.vpc.private_subnets)
+
   retry_join = var.retry_join
   region     = var.region
   server = {
     count                  = var.server.count
     instance_type          = var.server.instance_type
+    subnet_id              = module.vpc.public_subnets[count.index]
     vpc_security_group_ids = [aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
   }
   client = {
     count                  = var.client.count
     instance_type          = var.client.instance_type
+    subnet_id              = module.vpc.private_subnets[count.index]
     vpc_security_group_ids = [aws_security_group.ssh_ingress.id, aws_security_group.clients_ingress.id]
   }
   iam_instance_profile = aws_iam_instance_profile.instance_profile.name
   key_name             = aws_key_pair.nomad.key_name
-  subnet_id            = aws_subnet.cluster.id
-  datacenter           = aws_subnet.cluster.availability_zone
+  datacenter           = module.vpc.private_subnet_objects[count.index].availability_zone
   ami                  = data.aws_ami.nomad.id
 }
 
@@ -39,7 +42,7 @@ module "cluster" {
 resource "aws_elasticache_serverless_cache" "functions" {
   engine               = "valkey"
   name                 = "functions"
-  subnet_ids           = [aws_subnet.gateway.id, aws_subnet.cluster.id]
+  subnet_ids           = module.vpc.private_subnets
   security_group_ids   = [aws_security_group.cache.id]
   major_engine_version = "8"
   cache_usage_limits {
@@ -56,7 +59,7 @@ resource "aws_instance" "gateway" {
   key_name               = aws_key_pair.nomad.key_name
   vpc_security_group_ids = [aws_security_group.gatway.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
   count                  = 1
-  subnet_id              = aws_subnet.gateway.id
+  subnet_id              = module.vpc.private_subnets[0]
 
   # instance tags
   tags = merge(

@@ -4,7 +4,7 @@ locals {
 
 resource "aws_security_group" "lb_sg" {
   name   = "allow-http"
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   ingress {
     from_port   = 0
@@ -26,9 +26,8 @@ resource "aws_alb" "api_alb" {
   name               = "gateway-alb"
   internal           = false
   load_balancer_type = "application"
-  // TODO: remove cluster subnet
-  subnets         = [aws_subnet.gateway.id, aws_subnet.cluster.id]
-  security_groups = [aws_security_group.lb_sg.id]
+  subnets            = module.vpc.public_subnets
+  security_groups    = [aws_security_group.lb_sg.id]
 }
 
 resource "aws_lb_target_group" "gateway" {
@@ -36,7 +35,7 @@ resource "aws_lb_target_group" "gateway" {
   port        = local.gateway_port
   protocol    = "HTTP"
   target_type = "instance"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = module.vpc.vpc_id
 }
 
 

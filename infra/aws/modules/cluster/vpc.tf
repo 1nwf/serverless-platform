@@ -1,72 +1,24 @@
 locals {
-  azs             = ["a", "b", "c"]
-  private_subnets = [for idx, _ in local.azs : cidrsubnet(var.vpc_cidr, 8, idx)]
+  azs                  = ["a", "b", "c"]
+  private_subnet_start = 1
+  private_subnet_end   = local.private_subnet_start + length(local.azs)
+  public_subnet_start  = local.private_subnet_end
+  public_subnet_end    = local.public_subnet_start + length(local.azs)
+
+  private_subnets = [for num in range(local.private_subnet_start, local.private_subnet_end) : cidrsubnet(var.vpc_cidr, 8, num)]
+  public_subnets  = [for num in range(local.public_subnet_start, local.public_subnet_end) : cidrsubnet(var.vpc_cidr, 8, num)]
 }
 
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  tags = {
-    name = "main"
-  }
-}
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
 
+  name = "main"
+  cidr = var.vpc_cidr
 
-resource "aws_subnet" "gateway" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = cidrsubnet(var.vpc_cidr, 8, 1)
+  azs             = [for az in local.azs : "${var.region}${az}"]
+  private_subnets = local.private_subnets
+  public_subnets  = local.public_subnets
+
+  enable_nat_gateway      = true
   map_public_ip_on_launch = true
-  availability_zone       = "${var.region}a"
-}
-
-
-resource "aws_subnet" "cluster" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = cidrsubnet(var.vpc_cidr, 8, 2)
-  map_public_ip_on_launch = true
-  availability_zone       = "${var.region}b"
-}
-
-
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-}
-
-resource "aws_route_table" "rt" {
-  vpc_id = aws_vpc.main.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
-}
-
-resource "aws_route_table_association" "public" {
-  route_table_id = aws_route_table.rt.id
-  subnet_id      = aws_subnet.gateway.id
-}
-
-
-resource "aws_eip" "nat" {}
-
-
-resource "aws_nat_gateway" "gw" {
-  connectivity_type = "public"
-  subnet_id         = aws_subnet.cluster.id
-  allocation_id     = aws_eip.nat.allocation_id
-
-
-}
-
-resource "aws_route_table" "nat" {
-  vpc_id = aws_vpc.main.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.gw.id
-  }
-}
-
-
-resource "aws_route_table_association" "nat" {
-  route_table_id = aws_route_table.rt.id
-  subnet_id      = aws_subnet.cluster.id
 }

@@ -1,6 +1,6 @@
 resource "aws_security_group" "nomad_ui_ingress" {
   name   = "${var.name_prefix}-ui-ingress"
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   # Nomad
   ingress {
@@ -28,7 +28,7 @@ resource "aws_security_group" "nomad_ui_ingress" {
 
 resource "aws_security_group" "ssh_ingress" {
   name   = "${var.name_prefix}-ssh-ingress"
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   # SSH
   ingress {
@@ -55,7 +55,7 @@ resource "aws_security_group" "ssh_ingress" {
 
 resource "aws_security_group" "allow_all_internal" {
   name   = "${var.name_prefix}-allow-all-internal"
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   ingress {
     from_port = 0
@@ -74,7 +74,7 @@ resource "aws_security_group" "allow_all_internal" {
 
 resource "aws_security_group" "clients_ingress" {
   name   = "${var.name_prefix}-clients-ingress"
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   ingress {
     from_port = 0
@@ -105,7 +105,7 @@ resource "aws_security_group" "clients_ingress" {
 
 resource "aws_security_group" "cache" {
   name   = "${var.name_prefix}-cache-ingress"
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   ingress {
     from_port   = 0
@@ -124,7 +124,7 @@ resource "aws_security_group" "cache" {
 
 resource "aws_security_group" "gatway" {
   name   = "${var.name_prefix}-gateway-ingress"
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   ingress {
     from_port   = 8080

@@ -21,8 +21,9 @@ variable "nomad_binary" {
 
 variable "server" {
   type = object({
-    instance_type          = optional(string, "t2.micro")
     count                  = optional(number, 3)
+    instance_type          = optional(string, "t2.micro")
+    subnet_id              = string
     vpc_security_group_ids = set(string)
   })
 }
@@ -30,8 +31,9 @@ variable "server" {
 
 variable "client" {
   type = object({
-    instance_type          = optional(string, "t2.micro")
     count                  = optional(number, 3)
+    instance_type          = optional(string, "t2.micro")
+    subnet_id              = string
     vpc_security_group_ids = set(string)
   })
 }
@@ -44,11 +46,6 @@ variable "key_name" {
 
 
 variable "ami" {
-  type = string
-}
-
-
-variable "subnet_id" {
   type = string
 }
 

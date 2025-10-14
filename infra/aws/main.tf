@@ -1,5 +1,6 @@
 locals {
   vpc_cidr = "10.0.0.0/16"
+  azs      = ["a", "b", "c"]
 }
 
 provider "aws" {
@@ -23,7 +24,7 @@ module "cluster" {
   retry_join = var.retry_join
   region     = var.region
   server = {
-    count         = 1
+    count         = var.server_count
     instance_type = var.server_instance_type
   }
   client = {
