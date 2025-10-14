@@ -21,34 +21,47 @@ variable "nomad_binary" {
 
 variable "server" {
   type = object({
-    instance_type = optional(string, "t2.micro")
-    count         = optional(number, 3)
+    instance_type          = optional(string, "t2.micro")
+    count                  = optional(number, 3)
+    vpc_security_group_ids = set(string)
   })
 }
 
 
 variable "client" {
   type = object({
-    instance_type = optional(string, "t2.micro")
-    count         = optional(number, 3)
+    instance_type          = optional(string, "t2.micro")
+    count                  = optional(number, 3)
+    vpc_security_group_ids = set(string)
   })
 }
 
+
+variable "key_name" {
+  description = "Key name of the Key Pair to use for the instance"
+  type        = string
+}
+
+
+variable "ami" {
+  type = string
+}
+
+
+variable "subnet_id" {
+  type = string
+}
 
 variable "region" {
   type = string
 }
 
-
-variable "public_key" {
+variable "datacenter" {
   type = string
 }
 
-variable "allowlist_ip" {
-  description = "IP to allow access for the security groups (set 0.0.0.0/0 for world)"
-  default     = "0.0.0.0/0"
-}
 
-variable "vpc_cidr" {
-  type = string
+variable "iam_instance_profile" {
+  description = "IAM Instance Profile to launch the instances with"
+  type        = string
 }

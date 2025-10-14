@@ -129,7 +129,7 @@ resource "aws_security_group" "gatway" {
   ingress {
     from_port   = 8080
     to_port     = 8080
-    protocol    = "-1"
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 

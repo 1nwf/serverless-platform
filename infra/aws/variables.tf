@@ -7,8 +7,9 @@ variable "region" {
   description = "The AWS region to deploy to."
 }
 
-variable "ami" {
-  description = "The AMI to use for the server and client machines. Output from the Packer build process."
+variable "regions" {
+  description = "The AWS regions to deploy to."
+  type        = set(string)
 }
 
 variable "retry_join" {

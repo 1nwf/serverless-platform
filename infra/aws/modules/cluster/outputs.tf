@@ -1,8 +1,8 @@
 output "client_public_ips" {
-  value = aws_instance.client[*].public_ip
+  value = module.cluster.client_public_ips
 }
 
 
 output "server_public_ips" {
-  value = aws_instance.server[*].public_ip
+  value = module.cluster.server_public_ips
 }

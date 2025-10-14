@@ -11,8 +11,8 @@ locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
 }
 
-variable "region" {
-  type = string
+variable "regions" {
+  type = set(string)
 }
 
 data "amazon-ami" "ami" {
@@ -25,18 +25,18 @@ data "amazon-ami" "ami" {
   }
   most_recent = true
   owners      = ["099720109477"]
-  region      = var.region
 }
 
 
 source "amazon-ebs" "src" {
   ami_name              = "src-${local.timestamp}"
   instance_type         = "t2.medium"
-  region                = var.region
   source_ami            = data.amazon-ami.ami.id
   ssh_username          = "ubuntu"
   force_deregister      = true
   force_delete_snapshot = true
+  ami_regions           = var.regions
+
 
   tags = {
     Name          = "nomad"
