@@ -25,6 +25,7 @@ variable "server" {
     instance_type          = optional(string, "t2.micro")
     subnet_id              = string
     vpc_security_group_ids = set(string)
+    bootstrap_expect       = number
   })
 }
 

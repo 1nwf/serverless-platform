@@ -14,7 +14,7 @@ resource "aws_instance" "server" {
   # NomadAutoJoin is necessary for nodes to automatically join the cluster
   tags = merge(
     {
-      "Name" = "${var.name_prefix}-${var.region}-${var.datacenter}-server-${count.index}"
+      "Name" = "${var.name_prefix}-${var.datacenter}-server-${count.index}"
     },
     {
       "NomadAutoJoin" = "auto-join"
@@ -32,7 +32,7 @@ resource "aws_instance" "server" {
 
 
   user_data = templatefile("${local.data_scripts_path}/user-data-server.sh", {
-    server_count = var.server.count
+    server_count = var.server.bootstrap_expect
     region       = var.region
     datacenter   = var.datacenter
     cloud_env    = "aws"
@@ -60,7 +60,7 @@ resource "aws_instance" "client" {
   # NomadAutoJoin is necessary for nodes to automatically join the cluster
   tags = merge(
     {
-      "Name" = "${var.name_prefix}-${var.region}-${var.datacenter}-client-${count.index}"
+      "Name" = "${var.name_prefix}-${var.datacenter}-client-${count.index}"
     },
     {
       "NomadAutoJoin" = "auto-join"

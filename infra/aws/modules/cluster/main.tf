@@ -21,6 +21,7 @@ module "nomad" {
   retry_join = var.retry_join
   region     = var.region
   server = {
+    bootstrap_expect       = var.server.count * length(module.vpc.private_subnets)
     count                  = var.server.count
     instance_type          = var.server.instance_type
     subnet_id              = module.vpc.public_subnets[count.index]
