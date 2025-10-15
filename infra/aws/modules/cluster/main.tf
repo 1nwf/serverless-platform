@@ -25,7 +25,7 @@ module "nomad" {
     count                  = var.server.count
     instance_type          = var.server.instance_type
     subnet_id              = module.vpc.public_subnets[count.index]
-    vpc_security_group_ids = [aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
+    vpc_security_group_ids = [aws_security_group.allow_peer_vpcs.id, aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
   }
   client = {
     count                  = var.client.count

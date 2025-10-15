@@ -1,3 +1,22 @@
+resource "aws_security_group" "allow_peer_vpcs" {
+  name   = "${var.name_prefix}-allow-peer-vpcs"
+  vpc_id = module.vpc.vpc_id
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = var.peer_vpc_cidrs
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = var.peer_vpc_cidrs
+  }
+}
+
 resource "aws_security_group" "nomad_ui_ingress" {
   name   = "${var.name_prefix}-ui-ingress"
   vpc_id = module.vpc.vpc_id
@@ -89,17 +108,6 @@ resource "aws_security_group" "clients_ingress" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  # Add application ingress rules here
-  # These rules are applied only to the client nodes
-
-  # nginx example
-  # ingress {
-  #   from_port   = 80
-  #   to_port     = 80
-  #   protocol    = "tcp"
-  #   cidr_blocks = ["0.0.0.0/0"]
-  # }
 }
 
 

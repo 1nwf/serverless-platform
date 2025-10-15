@@ -49,6 +49,12 @@ variable "allowlist_ip" {
   default     = "0.0.0.0/0"
 }
 
+variable "peer_vpc_cidrs" {
+  description = "peer vpc cidrs"
+  type        = set(string)
+}
+
+
 variable "vpc_cidr" {
   type = string
 }
