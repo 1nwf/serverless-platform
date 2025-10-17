@@ -17,6 +17,15 @@ RETRY_JOIN=$3
 NOMAD_BINARY=$4
 REGION=$5
 DATACENTER=$6
+CLOUD_REGION=""
+
+# TODO: allow multiple cloud regions
+if [[ $REGION == *"east"* ]]; then
+  CLOUD_REGION="us-west-1"
+else
+  CLOUD_REGION="us-east-1"
+fi
+
 
 # Get IP from metadata service
 case $CLOUD in
@@ -41,6 +50,8 @@ esac
 
 # Nomad
 sed -i "s/RETRY_JOIN/$RETRY_JOIN/g" $CONFIGDIR/nomad.hcl
+sed -i "s/CLOUD_REGION/$CLOUD_REGION/g" $CONFIGDIR/nomad.hcl
+
 sed -i "s/REGION/$REGION/g" $CONFIGDIR/nomad.hcl
 sed -i "s/DATACENTER/$DATACENTER/g" $CONFIGDIR/nomad.hcl
 

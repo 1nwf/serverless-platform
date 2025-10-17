@@ -1,10 +1,8 @@
 locals {
   vpc_addr = "10.0.0.0/8"
-  vpc_east = cidrsubnet(local.vpc_addr, 8, 1)
-  vpc_west = cidrsubnet(local.vpc_addr, 8, 2)
   vpc_addrs = {
-    "us-east-1" : local.vpc_east,
-    "us-west-1" : local.vpc_west,
+    "us-east-1" : cidrsubnet(local.vpc_addr, 8, 1),
+    "us-west-1" : cidrsubnet(local.vpc_addr, 8, 2),
   }
 }
 
