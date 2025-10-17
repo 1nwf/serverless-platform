@@ -36,7 +36,7 @@ resource "aws_instance" "server" {
     region       = var.region
     datacenter   = var.datacenter
     cloud_env    = "aws"
-    retry_join   = var.retry_join
+    retry_join   = var.server.retry_join
     nomad_binary = var.nomad_binary
   })
   iam_instance_profile = var.iam_instance_profile
@@ -87,7 +87,7 @@ resource "aws_instance" "client" {
     region       = var.region
     datacenter   = var.datacenter
     cloud_env    = "aws"
-    retry_join   = var.retry_join
+    retry_join   = var.client.retry_join
     nomad_binary = var.nomad_binary
   })
   iam_instance_profile = var.iam_instance_profile

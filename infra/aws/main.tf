@@ -4,6 +4,7 @@ locals {
     "us-east-1" : cidrsubnet(local.vpc_addr, 8, 1),
     "us-west-1" : cidrsubnet(local.vpc_addr, 8, 2),
   }
+
 }
 
 provider "aws" {
@@ -30,21 +31,23 @@ module "cluster" {
     aws = aws.by_region[each.key]
   }
 
-  region     = each.key
-  vpc_cidr   = local.vpc_addrs[each.key]
-  retry_join = var.retry_join
+  region   = each.key
+  vpc_cidr = local.vpc_addrs[each.key]
 
   server = {
     count         = var.server_count
     instance_type = var.server_instance_type
+    retry_join    = join(", ", [for value in concat(["${var.retry_join}"], [for peer_region in keys(local.vpc_addrs) : "${var.retry_join} region=${peer_region}" if peer_region != each.key]) : "\"${value}\""])
   }
   client = {
     count         = var.client_count
     instance_type = var.client_instance_type
+    retry_join    = var.retry_join
   }
 
   public_key     = tls_private_key.pk.public_key_openssh
   peer_vpc_cidrs = [for peer_region, peer_vpc in local.vpc_addrs : peer_vpc if peer_region != each.key]
+
 }
 
 

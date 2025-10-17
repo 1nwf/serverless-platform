@@ -26,6 +26,7 @@ variable "server" {
     subnet_id              = string
     vpc_security_group_ids = set(string)
     bootstrap_expect       = number
+    retry_join             = string
   })
 }
 
@@ -36,6 +37,7 @@ variable "client" {
     instance_type          = optional(string, "t2.micro")
     subnet_id              = string
     vpc_security_group_ids = set(string)
+    retry_join             = string
   })
 }
 

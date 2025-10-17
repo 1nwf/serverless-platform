@@ -18,20 +18,21 @@ module "nomad" {
   source = "./nomad"
   count  = length(module.vpc.private_subnets)
 
-  retry_join = var.retry_join
-  region     = var.region
+  region = var.region
   server = {
     bootstrap_expect       = var.server.count * length(module.vpc.private_subnets)
     count                  = var.server.count
     instance_type          = var.server.instance_type
     subnet_id              = module.vpc.public_subnets[count.index]
     vpc_security_group_ids = [aws_security_group.allow_peer_vpcs.id, aws_security_group.nomad_ui_ingress.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
+    retry_join             = var.server.retry_join
   }
   client = {
     count                  = var.client.count
     instance_type          = var.client.instance_type
     subnet_id              = module.vpc.private_subnets[count.index]
     vpc_security_group_ids = [aws_security_group.ssh_ingress.id, aws_security_group.clients_ingress.id]
+    retry_join             = var.client.retry_join
   }
   iam_instance_profile = aws_iam_instance_profile.instance_profile.name
   key_name             = aws_key_pair.nomad.key_name

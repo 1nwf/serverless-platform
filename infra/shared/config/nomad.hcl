@@ -9,7 +9,7 @@ server {
   bootstrap_expect = SERVER_COUNT
 
   server_join {
-    retry_join = ["RETRY_JOIN", "provider=aws tag_key=NomadAutoJoin tag_value=auto-join region=CLOUD_REGION"]
+    retry_join = [RETRY_JOIN]
   }
 }
 
