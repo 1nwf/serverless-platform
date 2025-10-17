@@ -5,6 +5,17 @@ locals {
     "us-west-1" : cidrsubnet(local.vpc_addr, 8, 2),
   }
 
+  region_list = tolist(var.regions)
+  vpc_peering_pairs = {
+    for item in flatten([
+      for idx, region in local.region_list : [
+        for peer_region in slice(local.region_list, idx + 1, length(var.regions)) : {
+          region      = region
+          peer_region = peer_region
+          key         = "${region}=>${peer_region}"
+        }
+      ]
+  ]) : item.key => item }
 }
 
 provider "aws" {
@@ -54,14 +65,16 @@ module "cluster" {
 // ------------ create vpc peering connection ------------
 
 resource "aws_vpc_peering_connection" "main" {
-  vpc_id      = module.cluster["us-east-1"].vpc.vpc_id
-  peer_vpc_id = module.cluster["us-west-1"].vpc.vpc_id
-  peer_region = "us-west-1"
+  for_each    = local.vpc_peering_pairs
+  vpc_id      = module.cluster[each.value.region].vpc.vpc_id
+  peer_vpc_id = module.cluster[each.value.peer_region].vpc.vpc_id
+  peer_region = each.value.peer_region
 }
 
 resource "aws_vpc_peering_connection_accepter" "peer" {
-  provider                  = aws.by_region["us-west-1"]
-  vpc_peering_connection_id = aws_vpc_peering_connection.main.id
+  for_each                  = local.vpc_peering_pairs
+  provider                  = aws.by_region[each.value.peer_region]
+  vpc_peering_connection_id = aws_vpc_peering_connection.main[each.key].id
   auto_accept               = true
 }
 
@@ -69,10 +82,11 @@ resource "aws_vpc_peering_connection_accepter" "peer" {
 resource "aws_route" "vpc_peer" {
   for_each = {
     for item in flatten([
-      for region in var.regions : [
+      for region in local.region_list : [
         for region2, addr in local.vpc_addrs : {
           region    = region
           peer_addr = addr
+          conn_key  = contains(keys(local.vpc_peering_pairs), "${region}=>${region2}") ? "${region}=>${region2}" : "${region2}=>${region}"
         } if region2 != region
       ]
     ]) : "${item.region}=>${item.peer_addr}" => item
@@ -80,7 +94,7 @@ resource "aws_route" "vpc_peer" {
   provider                  = aws.by_region[each.value.region]
   route_table_id            = module.cluster[each.value.region].vpc.public_route_table_ids[0]
   destination_cidr_block    = each.value.peer_addr
-  vpc_peering_connection_id = aws_vpc_peering_connection.main.id
+  vpc_peering_connection_id = aws_vpc_peering_connection.main[each.value.conn_key].id
 }
 
 resource "aws_route_table_association" "east" {
