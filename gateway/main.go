@@ -35,6 +35,9 @@ func startServer(controller *Controller) {
 	r := mux.NewRouter()
 	r.HandleFunc("/{function}/invoke", invokeHandler(controller))
 	r.HandleFunc("/register", registerFunction(controller)).Methods(http.MethodPost)
+	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 	log.Print("starting server on :8080")
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		panic(err)
@@ -78,6 +81,7 @@ func registerFunction(ctrl *Controller) http.HandlerFunc {
 		log.Printf("register function: %v", body)
 		if err := ctrl.RegisterFunction(body.FunctionName, body.DockerImage, body.Resources); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "unable to register function: %v", err)
 			return
 		}
 		w.WriteHeader(http.StatusOK)

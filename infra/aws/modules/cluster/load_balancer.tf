@@ -36,6 +36,9 @@ resource "aws_lb_target_group" "gateway" {
   protocol    = "HTTP"
   target_type = "instance"
   vpc_id      = module.vpc.vpc_id
+  health_check {
+    path = "/health"
+  }
 }
 
 
