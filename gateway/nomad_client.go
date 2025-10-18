@@ -53,9 +53,11 @@ func (n *NomadClient) RegisterJob(
 
 	task := api.NewTask(jobId, "docker").
 		SetConfig("image", dockerImage)
-	task.Resources.MemoryMB = resources.Memory
-	task.Resources.MemoryMaxMB = resources.MemoryMax
-	task.Resources.CPU = resources.Cpu
+	task.Resources = &api.Resources{
+		MemoryMB:    resources.Memory,
+		MemoryMaxMB: resources.MemoryMax,
+		CPU:         resources.Cpu,
+	}
 
 	taskGroup := api.NewTaskGroup(jobId, 1).AddTask(sidecarTask).AddTask(task)
 	// disable auto restarts on task failure
