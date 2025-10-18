@@ -3,10 +3,6 @@ variable "name_prefix" {
   default     = "nomad"
 }
 
-variable "region" {
-  description = "The AWS region to deploy to."
-}
-
 variable "regions" {
   description = "The AWS regions to deploy to."
   type        = set(string)

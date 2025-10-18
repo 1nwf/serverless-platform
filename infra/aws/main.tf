@@ -83,9 +83,9 @@ resource "aws_route" "vpc_peer" {
   for_each = {
     for item in flatten([
       for region in local.region_list : [
-        for region2, addr in local.vpc_addrs : {
+        for region2 in local.region_list : {
           region    = region
-          peer_addr = addr
+          peer_addr = local.vpc_addrs[region2]
           conn_key  = contains(keys(local.vpc_peering_pairs), "${region}=>${region2}") ? "${region}=>${region2}" : "${region2}=>${region}"
         } if region2 != region
       ]

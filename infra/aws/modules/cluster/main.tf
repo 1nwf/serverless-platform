@@ -61,7 +61,7 @@ resource "aws_instance" "gateway" {
   key_name               = aws_key_pair.nomad.key_name
   vpc_security_group_ids = [aws_security_group.gatway.id, aws_security_group.ssh_ingress.id, aws_security_group.allow_all_internal.id]
   count                  = 1
-  subnet_id              = module.vpc.private_subnets[0]
+  subnet_id              = module.vpc.public_subnets[0]
 
   # instance tags
   tags = merge(
@@ -69,6 +69,21 @@ resource "aws_instance" "gateway" {
       "Name" = "${var.name_prefix}-gateway-${count.index}"
     },
   )
+
+  user_data                   = <<-EOF
+    #!/bin/bash
+    exec > >(tee log.txt) 2>&1
+    cd /home/ubuntu
+    export REDIS_ADDR=${aws_elasticache_serverless_cache.functions.endpoint[0].address}:${aws_elasticache_serverless_cache.functions.endpoint[0].port}
+    export NOMAD_ADDR=http://${module.nomad[0].server_public_ips[0]}:4646
+    echo $REDIS_ADDR > $HOME/redis_addr.txt
+    echo $NOMAD_ADDR > $HOME/nomad_addr.txt
+    wget https://github.com/1nwf/serverless-platform/releases/download/v0.0.1/gateway
+    sudo chmod +x gateway
+    ./gateway &
+  EOF
+  user_data_replace_on_change = true
+  depends_on                  = [aws_elasticache_serverless_cache.functions, module.nomad]
 
   root_block_device {
     volume_type           = "gp3"

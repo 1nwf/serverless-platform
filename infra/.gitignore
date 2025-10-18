@@ -11,3 +11,4 @@ Vagrantfile
 ignore*
 nomad.token
 *.pem
+*.auto.tfvars
