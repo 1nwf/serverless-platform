@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: go get .
       - name: Build
-        run: go build . -o gateway
+        run: go build -o gateway .
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
